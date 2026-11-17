@@ -9,6 +9,33 @@ import org.schabi.newpipe.extractor.stream.VideoStream
 import java.util.Locale
 
 /**
+ * HDR frames only reach the panel while the window asks for the HDR color mode, but that same mode
+ * makes the compositor treat SDR thumbnails and UI as wide-gamut input and wash them out. So the
+ * mode follows whatever is actually on screen instead of the display's capabilities.
+ */
+object HdrOutput {
+    var wanted = false
+        private set
+
+    private var applier: ((Boolean) -> Unit)? = null
+
+    fun bind(applier: (Boolean) -> Unit) {
+        this.applier = applier
+        applier(wanted)
+    }
+
+    fun unbind() {
+        applier = null
+    }
+
+    fun set(active: Boolean) {
+        if (active == wanted) return
+        wanted = active
+        applier?.invoke(active)
+    }
+}
+
+/**
  * Best-effort HDR gate. YouTube exposes HDR renditions as 10-bit VP9 profile 2
  * (and increasingly 10-bit AV1). We only prefer those when the display and a
  * decoder both advertise HDR support for that exact codec family, so an HDR TV

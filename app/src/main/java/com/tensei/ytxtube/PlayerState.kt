@@ -931,6 +931,7 @@ class PlayerState(private val scope: CoroutineScope) {
     fun close() {
         loadJob?.cancel()
         controller?.run { stop(); clearMediaItems() }
+        HdrOutput.set(false)
         queue = emptyList()
         expanded = false
         fullscreen = false
@@ -1081,6 +1082,7 @@ class PlayerState(private val scope: CoroutineScope) {
             .flatMap { g -> (0 until g.length).map { g.getTrackFormat(it) } }
         val format = formats.firstOrNull { it.height == height }
         if (format == null) {
+            HdrOutput.set(false)
             playingFormat = "${tier}p"
             return
         }
@@ -1100,6 +1102,7 @@ class PlayerState(private val scope: CoroutineScope) {
             } == true || codecText.contains("vp09.02") || codecText.contains("vp9.2") ||
                 (codecText.startsWith("av01") &&
                     (codecText.split('.').getOrNull(3)?.take(2)?.toIntOrNull() ?: 0) >= 10)
+            HdrOutput.set(hdr)
             playingFormat = listOfNotNull(
                 auto,
                 "${labelTier}p",

@@ -135,7 +135,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setHighestRefreshRate()
-        enableHdrOutput()
+        bindHdrOutput()
 
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -158,6 +158,11 @@ class MainActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
         shortsPlayerHolder?.pause()
+    }
+
+    override fun onDestroy() {
+        HdrOutput.unbind()
+        super.onDestroy()
     }
 
     override fun onUserLeaveHint() {
@@ -218,16 +223,22 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * HDR video only reaches the panel when the window opts into the HDR color mode.
-     * Without this the compositor tone-maps 10-bit BT.2020 frames back to SDR.
+     * HDR video only reaches the panel when the window opts into the HDR color mode, but that mode
+     * also tone-maps every SDR thumbnail and piece of UI, so it is only held while an HDR frame is
+     * actually on screen. See HdrOutput.
      */
-    private fun enableHdrOutput() {
+    private fun bindHdrOutput() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        runCatching {
+        @Suppress("DEPRECATION")
+        val hdrCapable = runCatching {
+            display?.hdrCapabilities?.supportedHdrTypes?.isNotEmpty() == true
+        }.getOrDefault(false)
+        HdrOutput.bind { hdr ->
             @Suppress("DEPRECATION")
-            val disp = display ?: return
-            if (disp.hdrCapabilities?.supportedHdrTypes?.isNotEmpty() == true) {
-                window.colorMode = android.content.pm.ActivityInfo.COLOR_MODE_HDR
+            window.colorMode = if (hdr && hdrCapable) {
+                android.content.pm.ActivityInfo.COLOR_MODE_HDR
+            } else {
+                android.content.pm.ActivityInfo.COLOR_MODE_DEFAULT
             }
         }
     }
